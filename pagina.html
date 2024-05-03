@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generar PDF desde ThingSpeak</title>
+
+</head>
+<body>
+    <br>
+    
+    <a href="javascript:genPDF()">Crear PDF</a>
+    <script type="text/javascript" src="jspdf.min.js"></script>
+    <script type="text/javascript">
+        function genPDF(){
+            var doc=new jsPDF();
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "https://api.thingspeak.com/channels/2520325/feeds.json?results=50", true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    // Procesar los datos obtenidos
+                    var response = JSON.parse(xhr.responseText);
+                    if (response.feeds.length > 0) {
+                        // Definir la posición inicial en el PDF
+                        var posY = 20;
+                        
+                        // Iterar sobre los últimos 50 datos
+                        for (var i = 0; i < response.feeds.length; i++) {
+                            var data = response.feeds[i];
+                            // Obtener la fecha y hora en hora local de Bogotá
+                            var fechaHoraBogota = new Date(data.created_at);
+                            fechaHoraBogota.toLocaleString('es-CO', { timeZone: 'America/Bogota' });
+                            
+                            // Obtener los datos relevantes de cada entrada
+                            var fecha = fechaHoraBogota.toLocaleDateString();
+                            var hora = fechaHoraBogota.toLocaleTimeString();
+                            var lamina = data.field1;
+                            var caudal = data.field2;
+                            var velocidad = data.field3;
+                            
+                            // Agregar los datos al PDF con un tamaño de letra más pequeño
+                            doc.setFontSize(10);
+                            doc.text(20, posY, "Fecha: " + fecha + " - " + hora);
+                            doc.text(20, posY + 10, "Lámina: " + lamina+" Cm ");
+                            doc.text(20, posY + 20, "Caudal: " + caudal+" Lps");
+                            doc.text(20, posY + 30, "Velocidad: " + velocidad+" m/s");
+                            
+                            // Incrementar la posición vertical para el siguiente conjunto de datos
+                            posY += 40; // Espacio entre cada conjunto de datos
+                            
+                            // Agregar una nueva página si es necesario
+                            if (posY >= doc.internal.pageSize.height - 20) {
+                                doc.addPage();
+                                posY = 20;
+                            }
+                        }
+                        
+                        // Guardar el PDF
+                        doc.save('Datos_ThingSpeak.pdf');
+                    } else {
+                        alert("No se encontraron datos en ThingSpeak.");
+                    }
+                }
+            };
+            xhr.send();
+        }
+    </script>
+</body>
+</html>
